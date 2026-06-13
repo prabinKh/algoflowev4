@@ -59,7 +59,8 @@ async function startServer() {
     createProxyMiddleware({
       target: "http://127.0.0.1:8001",
       changeOrigin: true,
-      pathFilter: (path) => (path.startsWith("/api") && path !== "/api/health") || path.startsWith("/django-admin") || path.startsWith("/static") || path.startsWith("/media"),
+      // Renamed 'path' to 'reqPath' to avoid shadowing the imported 'path' module
+      pathFilter: (reqPath) => (reqPath.startsWith("/api") && reqPath !== "/api/health") || reqPath.startsWith("/django-admin") || reqPath.startsWith("/static") || reqPath.startsWith("/media"),
       proxyTimeout: 30000,
       timeout: 30000,
       on: {
