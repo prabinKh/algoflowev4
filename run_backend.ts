@@ -39,9 +39,9 @@ export function startDjango() {
   };
 
   const cleanupExisting = async () => {
-    console.log("Cleaning up existing Django processes and port 8000...");
+    console.log("Cleaning up existing Django/Gunicorn processes and port 8001...");
     const logStream = fs.createWriteStream(path.join(process.cwd(), 'backend.log'), { flags: 'a' });
-    logStream.write(`\n[${new Date().toISOString()}] Cleaning up existing Django processes and port 8000...\n`);
+    logStream.write(`\n[${new Date().toISOString()}] Cleaning up existing Django/Gunicorn processes and port 8001...\n`);
     const { execSync } = await import('child_process');
     try {
       if (process.platform === "win32") {
@@ -50,14 +50,20 @@ export function startDjango() {
           logStream.write("Windows taskkill success\n");
         } catch (e) { logStream.write(`Windows taskkill failed/none: ${e}\n`); }
       } else {
-        // More aggressive cleanup on Linux
+        // Kill old manage.py processes
         try {
-          // Kill processes by name
           const out = execSync("pkill -9 -f 'manage.py' || true").toString();
-          logStream.write(`Linux pkill output: ${out}\n`);
-        } catch (e) { logStream.write(`Linux pkill error: ${e}\n`); }
+          logStream.write(`Linux pkill manage.py output: ${out}\n`);
+        } catch (e) { logStream.write(`Linux pkill manage.py error: ${e}\n`); }
+        
+        // Kill old gunicorn processes
         try {
-          // Kill anything listening on port 8001
+          const out = execSync("pkill -9 -f 'gunicorn' || true").toString();
+          logStream.write(`Linux pkill gunicorn output: ${out}\n`);
+        } catch (e) { logStream.write(`Linux pkill gunicorn error: ${e}\n`); }
+
+        // Kill anything listening on port 8001
+        try {
           const out = execSync("fuser -k 8001/tcp || true").toString();
           logStream.write(`Linux fuser output: ${out}\n`);
         } catch (e) { logStream.write(`Linux fuser error/none: ${e}\n`); }
@@ -90,6 +96,14 @@ export function startDjango() {
       console.log("Django not found. Installing requirements...");
       await runCommand(pythonCmd, ["-m", "pip", "install", "-r", "requirements.txt"]);
     }
+
+    // Ensure Gunicorn is installed
+    console.log("Checking for Gunicorn...");
+    const checkGunicorn = await runCommand(pythonCmd, ["-m", "gunicorn", "--version"]);
+    if (checkGunicorn !== 0) {
+      console.log("Gunicorn not found. Installing Gunicorn...");
+      await runCommand(pythonCmd, ["-m", "pip", "install", "gunicorn"]);
+    }
     
     console.log("Running Django makemigrations...");
     await runCommand(pythonCmd, ["manage.py", "makemigrations", "--noinput"]);
@@ -112,11 +126,23 @@ export function startDjango() {
       await runCommand(pythonCmd, ["seed_logitech.py"]);
     }
 
-    console.log("Starting Django server on 8001...");
+    console.log("Starting Gunicorn server on 8001...");
     const logStream = fs.createWriteStream(path.join(process.cwd(), 'backend.log'), { flags: 'a' });
-    logStream.write(`[${new Date().toISOString()}] Attempting to start Django on 8001...\n`);
+    logStream.write(`[${new Date().toISOString()}] Attempting to start Gunicorn on 8001...\n`);
     
-    const server = spawn(pythonCmd, ["-u", "manage.py", "runserver", "0.0.0.0:8001", "--noreload"], {
+    // The WSGI application path based on your settings module 'fixitall_backend.settings'
+    const wsgiApp = "fixitall_backend.wsgi:application";
+
+    // Start Gunicorn instead of runserver
+    const server = spawn(pythonCmd, [
+      "-m", "gunicorn",
+      wsgiApp,
+      "--bind", "0.0.0.0:8001",
+      "--workers", "3",
+      "--timeout", "120",
+      "--access-logfile", "-",
+      "--error-logfile", "-"
+    ], {
       cwd: backendDir,
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PYTHONUNBUFFERED: "1" }
@@ -125,26 +151,26 @@ export function startDjango() {
     if (server.stdout) {
       server.stdout.on('data', (data) => {
         const out = data.toString();
-        process.stdout.write(`[DJANGO STDOUT] ${out}`);
+        process.stdout.write(`[GUNICORN STDOUT] ${out}`);
         logStream.write(out);
       });
     }
     if (server.stderr) {
       server.stderr.on('data', (data) => {
         const out = data.toString();
-        process.stderr.write(`[DJANGO STDERR] ${out}`);
+        process.stderr.write(`[GUNICORN STDERR] ${out}`);
         logStream.write(out);
       });
     }
 
     server.on("error", (err) => {
-      console.error("Failed to start Django server:", err);
-      logStream.write(`Failed to start Django server: ${err.message}\n`);
+      console.error("Failed to start Gunicorn server:", err);
+      logStream.write(`Failed to start Gunicorn server: ${err.message}\n`);
     });
     
     server.on("close", (code) => {
-        console.log(`Django server closed with code ${code}`);
-        logStream.write(`Django server closed with code ${code}\n`);
+        console.log(`Gunicorn server closed with code ${code}`);
+        logStream.write(`Gunicorn server closed with code ${code}\n`);
     });
   };
 
