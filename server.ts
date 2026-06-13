@@ -10,12 +10,13 @@ import { startDjango } from "./run_backend.ts";
 
 dotenv.config();
 
+// This works perfectly now because we are building as an ES Module (.mjs)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // Start Django backend
   startDjango();
@@ -75,8 +76,10 @@ async function startServer() {
         },
         error: (err, req, res) => {
           console.error(`Proxy Error for ${req.url}:`, err);
-          res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: "Backend not ready or timed out.", details: err.message }));
+          if (!res.headersSent) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Backend not ready or timed out.", details: err.message }));
+          }
         }
       }
     })
@@ -93,11 +96,14 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    // Production: Serve static files and fallback to index.html
     const distPath = path.join(process.cwd(), 'dist');
+    
     app.use(express.static(distPath, {
       maxAge: '1y',
       immutable: true,
     }));
+    
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

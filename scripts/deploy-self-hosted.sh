@@ -27,7 +27,10 @@ stop_app() {
     rm -f "$PID_FILE"
   fi
 
+  # Kill both old CJS and new MJS builds to be safe
   pkill -f "dist/server.cjs" 2>/dev/null || true
+  pkill -f "dist/server.mjs" 2>/dev/null || true 
+  
   pkill -f "manage.py runserver" 2>/dev/null || true
   pkill -f "manage.py migrate" 2>/dev/null || true
   fuser -k 3000/tcp 2>/dev/null || true
