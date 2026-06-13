@@ -96,7 +96,8 @@ async function startServer() {
       immutable: true,
     }));
     
-    app.get('*', (req, res) => {
+    // FIX: Changed '*' to '(.*)' to comply with Express 5 / path-to-regexp v8 syntax
+    app.get('(.*)', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
