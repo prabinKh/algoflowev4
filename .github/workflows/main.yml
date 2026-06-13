@@ -1,0 +1,22 @@
+name: Self-Hosted Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-on-my-server:
+    # Change this from 'ubuntu-latest' to 'self-hosted'
+    # You can also use custom labels you defined during setup, e.g., 'self-hosted', 'linux', 'x64'
+    runs-on: self-hosted 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show server environment
+        run: |
+          echo "Running on my own server!"
+          uname -a
+          df -h
