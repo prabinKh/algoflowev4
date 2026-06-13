@@ -61,16 +61,19 @@ setup_python() {
 
 # --- Node dependencies & build ---
 setup_node() {
-  echo "Installing Node dependencies..."
+  echo "Installing Node dependencies (including devDependencies for build tools)..."
+  # NODE_ENV=production skips devDependencies; vite/esbuild/vitest are required to build.
+  unset NODE_ENV
+  export NPM_CONFIG_PRODUCTION=false
+
   if [[ -f package-lock.json ]]; then
-    npm ci --legacy-peer-deps
+    npm ci --legacy-peer-deps --include=dev
   else
-    npm install --legacy-peer-deps
+    npm install --legacy-peer-deps --include=dev
   fi
 
   echo "Building frontend + production server..."
-  export NODE_ENV=production
-  npm run build
+  NODE_ENV=production npm run build:prod
 }
 
 # --- Django migrations ---

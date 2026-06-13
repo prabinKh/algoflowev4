@@ -26,7 +26,7 @@ pip3 install -r backend/requirements.txt
 # 3. Building
 echo "[3/4] Building application..."
 # Note: Ensure the build script in package.json is correct
-npm run build
+npm run build:prod
 
 # 4. Execution
 echo "[4/4] Starting server..."

@@ -28,7 +28,6 @@ jobs:
 
       - name: Deploy backend and frontend
         env:
-          NODE_ENV: production
           PORT: 3000
         run: |
           chmod +x scripts/deploy-self-hosted.sh
