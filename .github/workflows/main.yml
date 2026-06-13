@@ -29,6 +29,7 @@ jobs:
       - name: Deploy backend and frontend
         env:
           PORT: 3000
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           chmod +x scripts/deploy-self-hosted.sh
           ./scripts/deploy-self-hosted.sh

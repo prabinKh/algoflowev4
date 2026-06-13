@@ -73,6 +73,10 @@ setup_node() {
   fi
 
   echo "Building frontend + production server..."
+  # Vite needs extra heap on smaller servers (default ~1GB is not enough for this app).
+  export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
+  echo "Using NODE_OPTIONS=${NODE_OPTIONS}"
+  free -h 2>/dev/null || true
   NODE_ENV=production npm run build:prod
 }
 
