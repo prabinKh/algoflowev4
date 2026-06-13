@@ -145,12 +145,3 @@ In a new terminal, start Celery worker:
 celery -A fixitall_backend worker -l info
 ```
 
-## Contributing
-We welcome contributions to AlgoFlow! Please refer to `CONTRIBUTING.md` (if available) for guidelines on how to contribute. For any issues or feature requests, please open an issue on GitHub.
-
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
----
-
-**Note**: This README is a comprehensive guide to the AlgoFlow project. For more detailed setup instructions, refer to `MULTIVENDOR_SETUP.md` and `AGENTS.md` within the repository.
