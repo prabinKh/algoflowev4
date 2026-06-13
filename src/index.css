@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Electronics color psychology: 
+       Blue (Primary) = Trust, reliability, technology.
+       Orange/Red (Destructive) = Urgency, excitement, limited offers.
+       Green (Success) = Value, savings, in-stock confidence.
+       Amber (Warning) = Attention, premium highlights, ratings.
+       Zinc/Slate = Professionalism, precision, high-end quality.
+    */
+    --background: 220 33% 98%;
+    --foreground: 224 71% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    /* Trust Blue - Deep and reliable */
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Urgency Red-Orange */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Value Green */
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+
+    /* Attention Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+    --radius-outer: 18px;
+    --radius-inner: 12px;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.03), 0 0 0 1px rgba(0,0,0,0.01);
+    --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-lg: 0 12px 24px -6px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.03);
+    --shadow-xl: 0 24px 48px -12px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.04);
+    --shadow-glow: 0 0 20px -4px hsl(217 91% 50% / 0.2);
+  }
+
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 14% 12%;
+    --muted-foreground: 220 9% 55%;
+    --accent: 220 14% 12%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 14 90% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 152 69% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 220 14% 14%;
+    --input: 220 14% 14%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased selection:bg-primary/20;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight leading-tight;
+  }
+}
+
+@layer components {
+  .neo-container {
+    @apply w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6;
+  }
+
+  .product-card {
+    @apply relative flex flex-col gap-2 p-2.5 sm:p-3.5 rounded-[var(--radius-outer)]
+           bg-card border-2 border-black/10 dark:border-white/20
+           hover:border-primary/40 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1),0_0_20px_-4px_rgba(37,99,235,0.1)]
+           transition-all duration-500 mechanical-curve overflow-hidden;
+    background-image: radial-gradient(circle at top right, transparent, transparent);
+  }
+
+  .product-card:hover {
+    transform: translateY(-8px);
+    background-image: radial-gradient(circle at top right, hsl(var(--primary) / 0.03), transparent);
+  }
+
+  .product-card-image {
+    @apply aspect-square bg-gradient-to-br from-accent/30 to-muted/30 rounded-[var(--radius-inner)] overflow-hidden
+           flex items-center justify-center p-2 sm:p-4 relative transition-colors duration-500;
+  }
+
+  .product-card:hover .product-card-image {
+    @apply from-primary/5 to-primary/10;
+  }
+
+  .fluid-text-xs {
+    @apply text-[10px] sm:text-[11px] md:text-xs;
+  }
+
+  .fluid-text-sm {
+    @apply text-xs sm:text-[13px] md:text-sm;
+  }
+
+  .fluid-text-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .fluid-text-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .spec-label {
+    @apply fluid-text-xs uppercase tracking-wider font-mono text-muted-foreground bg-accent/50 px-1.5 py-0.5 rounded;
+  }
+
+  .price-display {
+    @apply font-mono tabular-nums font-bold text-primary tracking-tighter;
+  }
+
+  .price-original {
+    @apply font-mono tabular-nums text-muted-foreground/60 line-through;
+  }
+
+  .section-title {
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-display font-bold tracking-tighter text-foreground;
+  }
+
+  .deal-section-glow {
+    @apply relative;
+  }
+
+  .deal-section-glow::before {
+    content: '';
+    @apply absolute -inset-1 bg-gradient-to-r from-primary/10 via-destructive/10 to-primary/10 rounded-[2.6rem] blur-2xl opacity-40 -z-10;
+  }
+
+  .neo-badge {
+    @apply inline-flex items-center px-1.5 py-0.5 rounded-md fluid-text-xs uppercase tracking-wider font-mono font-bold;
+  }
+
+  .neo-badge-sale {
+    @apply neo-badge bg-destructive text-destructive-foreground shadow-sm animate-pulse;
+  }
+
+  .neo-badge-new {
+    @apply neo-badge bg-primary text-primary-foreground shadow-sm;
+  }
+
+  .neo-badge-trust {
+    @apply neo-badge bg-success/10 text-success border border-success/20;
+  }
+
+  .stock-progress-bar {
+    @apply h-1 w-full bg-muted rounded-full overflow-hidden mt-1;
+  }
+
+  .stock-progress-fill {
+    @apply h-full bg-destructive transition-all duration-1000;
+  }
+
+  .neo-badge-stock {
+    @apply neo-badge bg-warning/20 text-warning border border-warning/20;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl font-bold text-sm
+           transition-all duration-300 active:scale-[0.95]
+           hover:shadow-[var(--shadow-glow)] hover:brightness-110
+           shadow-[0_2px_0_rgba(255,255,255,0.1)_inset,var(--shadow-sm)];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-5 sm:px-8 py-2.5 sm:py-3 border-2 border-border rounded-xl font-bold text-sm text-foreground
+           hover:bg-accent hover:border-primary/30 transition-all duration-300 active:scale-[0.95];
+  }
+
+  .card-hover-glow:hover {
+    box-shadow: 0 0 30px -5px hsl(217 91% 50% / 0.15), var(--shadow-lg);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+
+  .mechanical-curve {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .text-gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary/70 bg-clip-text text-transparent;
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Remix: AlgoFlow - Neo Store",
+  "description": "A high-performance electronics store with 3D product showcases, real-time analytics, and a Django-powered backend.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
