@@ -59,7 +59,7 @@ graph TD
     Backend -->|AI Features| Gemini[Gemini AI API]
     Backend -->|File Storage| S3[AWS S3]
     
-    Admin[Super Admin] -->|Platform Control| DRF
+    Admin[Super Admin] -->|Platform Control| DRF  _>
     Vendor[Company Admin] -->|Vendor Dashboard| DRF
 ```
 
