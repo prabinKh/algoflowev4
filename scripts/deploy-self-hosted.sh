@@ -27,9 +27,12 @@ stop_app() {
     rm -f "$PID_FILE"
   fi
 
+  # Kill both old CJS and new MJS builds to be safe
   pkill -f "dist/server.cjs" 2>/dev/null || true
+  pkill -f "dist/server.mjs" 2>/dev/null || true 
+  
   pkill -f "manage.py runserver" 2>/dev/null || true
-  pkill -f "manage.py migrate" 2>/dev/null || true
+  pkill -f "gunicorn" 2>/dev/null || true
   fuser -k 3000/tcp 2>/dev/null || true
   fuser -k 8001/tcp 2>/dev/null || true
 }
@@ -107,8 +110,8 @@ start_app() {
     sleep 2
   done
 
-  echo "Health check failed. Recent logs:"
-  tail -n 50 "$LOG_DIR/app.log" || true
+  echo "Health check failed. Printing FULL logs to help debug:"
+  cat "$LOG_DIR/app.log" || true
   exit 1
 }
 

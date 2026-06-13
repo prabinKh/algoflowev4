@@ -9,6 +9,8 @@ import { startDjango } from "./run_backend.ts";
 
 dotenv.config();
 
+// NO import.meta.url here! We rely entirely on process.cwd()
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
@@ -96,7 +98,7 @@ async function startServer() {
       immutable: true,
     }));
     
-    // FIX: Changed '*' to '/{*splat}' to comply with Express 5 / path-to-regexp v8 syntax
+    // Express 5 / path-to-regexp v8 catch-all syntax
     app.get('/{*splat}', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
