@@ -25,6 +25,8 @@ jobs:
           node --version || echo "Node.js not installed"
           python3 --version || echo "Python3 not installed"
           npm --version || echo "npm not installed"
+          # FIX: Show who the runner is running as (helps diagnose permission errors)
+          echo "Running as user: $(whoami) (uid=$(id -u))"
 
       - name: Deploy backend and frontend
         env:
@@ -35,7 +37,9 @@ jobs:
           ./scripts/deploy-self-hosted.sh
 
       - name: Verify deployment
+        # FIX: Give the app a few extra seconds after deploy before hitting health check
         run: |
+          sleep 5
           echo "Frontend health:"
           curl -fsS "http://127.0.0.1:3000/api/health"
           echo ""

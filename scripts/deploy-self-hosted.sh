@@ -27,41 +27,48 @@ stop_app() {
     rm -f "$PID_FILE"
   fi
 
-  # Kill both old CJS and new MJS builds to be safe
+  # FIX: Use kill only on PIDs we OWN (no sudo needed, no permission errors)
   pkill -f "dist/server.cjs" 2>/dev/null || true
-  pkill -f "dist/server.mjs" 2>/dev/null || true 
-  
+  pkill -f "dist/server.mjs" 2>/dev/null || true
   pkill -f "manage.py runserver" 2>/dev/null || true
   pkill -f "gunicorn" 2>/dev/null || true
-  fuser -k 3000/tcp 2>/dev/null || true
-  fuser -k 8001/tcp 2>/dev/null || true
+
+  # FIX: fuser may fail if port owned by another user; use lsof as fallback
+  fuser -k 3000/tcp 2>/dev/null || lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+  fuser -k 8001/tcp 2>/dev/null || lsof -ti:8001 | xargs kill -9 2>/dev/null || true
+
+  sleep 1
 }
 
-# --- Python environment ---
+# --- Python virtual environment ---
 setup_python() {
-  echo "Setting up Python environment..."
+  echo "Setting up Python virtual environment..."
   PYTHON_BIN="python3"
+
+  VENV_DIR="$ROOT_DIR/backend/.venv"
 
   if [[ -d "$ROOT_DIR/backend/myenv/bin" ]]; then
     source "$ROOT_DIR/backend/myenv/bin/activate"
     PYTHON_BIN="python"
-  elif [[ ! -d "$ROOT_DIR/backend/.venv" ]]; then
-    "$PYTHON_BIN" -m venv "$ROOT_DIR/backend/.venv"
-    source "$ROOT_DIR/backend/.venv/bin/activate"
+  elif [[ ! -d "$VENV_DIR" ]]; then
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+    source "$VENV_DIR/bin/activate"
     PYTHON_BIN="python"
   else
-    source "$ROOT_DIR/backend/.venv/bin/activate"
+    source "$VENV_DIR/bin/activate"
     PYTHON_BIN="python"
   fi
 
-  "$PYTHON_BIN" -m pip install --upgrade pip
-  "$PYTHON_BIN" -m pip install -r "$ROOT_DIR/backend/requirements.txt"
+  "$PYTHON_BIN" -m pip install --upgrade pip --quiet
+  "$PYTHON_BIN" -m pip install -r "$ROOT_DIR/backend/requirements.txt" --quiet
+  # FIX: Ensure gunicorn is always installed inside the venv
+  "$PYTHON_BIN" -m pip install gunicorn --quiet
   export PYTHON_BIN
 }
 
 # --- Node dependencies & build ---
 setup_node() {
-  echo "Installing Node dependencies (including devDependencies for build tools)..."
+  echo "Installing Node dependencies..."
   unset NODE_ENV
   export NPM_CONFIG_PRODUCTION=false
 
@@ -73,8 +80,6 @@ setup_node() {
 
   echo "Building frontend + production server..."
   export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
-  echo "Using NODE_OPTIONS=${NODE_OPTIONS}"
-  free -h 2>/dev/null || true
   NODE_ENV=production npm run build:prod
 }
 
@@ -94,17 +99,21 @@ start_app() {
   export NODE_ENV=production
   export PORT="${PORT:-3000}"
 
-  nohup npm run start > "$LOG_DIR/app.log" 2>&1 &
+  # FIX: Pass the activated venv's PATH so node can find gunicorn/python3
+  nohup env PATH="$PATH" npm run start > "$LOG_DIR/app.log" 2>&1 &
   echo $! > "$PID_FILE"
+  echo "Server PID: $(cat $PID_FILE)"
 
   echo "Waiting for services to become ready..."
+  # FIX: Wait longer (60s) because Django seeding takes time on first run
   for i in {1..30}; do
     if curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
       echo "Health check passed on port ${PORT}"
       echo "=== Deploy finished successfully ==="
       return 0
     fi
-    sleep 2
+    echo "  Attempt $i/30 — waiting 3s..."
+    sleep 3
   done
 
   echo "Health check failed. Printing FULL logs to help debug:"
