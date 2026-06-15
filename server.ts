@@ -1,123 +1,81 @@
-import { spawn } from "child_process";
+import express from "express";
+import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
+import cors from "cors";
+import dotenv from "dotenv";
+import { createProxyMiddleware } from "http-proxy-middleware";
+import { startDjango } from "./run_backend.ts";
 
-export function startDjango() {
-  console.log("startDjango function called (run_backend.ts)");
-  const backendDir = path.join(process.cwd(), "backend");
-  
-  const runCommand = (cmd: string, args: string[]) => {
-    const commandStr = `Running: ${cmd} ${args.join(" ")}`;
-    console.log(commandStr);
-    const logStream = fs.createWriteStream(path.join(process.cwd(), 'backend.log'), { flags: 'a' });
-    logStream.write(`\n[${new Date().toISOString()}] ${commandStr}\n`);
-    const proc = spawn(cmd, args, {
-      cwd: backendDir,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+dotenv.config();
 
-    if (proc.stdout) {
-      proc.stdout.on('data', (data) => {
-        logStream.write(data);
-      });
-    }
-    if (proc.stderr) {
-      proc.stderr.on('data', (data) => {
-        logStream.write(data);
-      });
-    }
+async function startServer() {
+  const app = express();
+  const PORT = process.env.PORT || 3000;
 
-    return new Promise<number>((resolve) => {
-      proc.on("close", (code) => {
-        resolve(code || 0);
-      });
-      proc.on("error", (err) => {
-        console.error(`Failed to start ${cmd}:`, err);
-        resolve(-1);
-      });
-    });
-  };
+  console.log(`[${new Date().toISOString()}] Starting server on port ${PORT}...`);
 
-  // Removed cleanupExisting function and its call
+  // Start Django backend
+  try {
+    startDjango();
+  } catch (err) {
+    console.error("Failed to trigger startDjango:", err);
+  }
 
-  const start = async () => {
-    const pythonCmd = "python3";
-    
-    console.log("Checking for pip...");
-    const checkPip = await runCommand(pythonCmd, ["-m", "pip", "--version"]);
-    if (checkPip !== 0) {
-      console.log("pip not found. Attempting to install pip using install_pip.py...");
-      const installPipPath = path.join(process.cwd(), "backend", "install_pip.py");
-      if (fs.existsSync(installPipPath)) {
-        await runCommand(pythonCmd, [installPipPath]);
-      } else {
-        console.error(`install_pip.py not found at ${installPipPath}!`);
+  app.use(cors());
+  app.use(express.json());
+
+  // Health check - handle before proxy
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
+  });
+
+  // Proxy API and Admin requests to Django
+  app.use(
+    ["/api", "/django-admin", "/static", "/media"],
+    createProxyMiddleware({
+      target: "http://127.0.0.1:8001",
+      changeOrigin: true,
+      pathFilter: (reqPath) => reqPath !== "/api/health",
+      on: {
+        error: (err, req, res) => {
+          console.error(`Proxy Error for ${req.url}:`, err.message);
+          if (!res.headersSent) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "Backend not ready.", details: err.message }));
+          }
+        }
       }
-    }
+    })
+  );
 
-    console.log("Checking for Django...");
-    const checkDjango = await runCommand(pythonCmd, ["-c", "import django; print(django.get_version())"]);
-    if (checkDjango !== 0) {
-      console.log("Django not found. Installing requirements...");
-      await runCommand(pythonCmd, ["-m", "pip", "install", "-r", "requirements.txt"]);
-    }
-
-    // Ensure Gunicorn is installed
-    console.log("Checking for Gunicorn...");
-    const checkGunicorn = await runCommand(pythonCmd, ["-m", "gunicorn", "--version"]);
-    if (checkGunicorn !== 0) {
-      console.log("Gunicorn not found. Installing Gunicorn...");
-      await runCommand(pythonCmd, ["-m", "pip", "install", "gunicorn"]);
-    }
-    
-    // Removed Django makemigrations and migrate calls from here, they are handled by deploy-self-hosted.sh
-    // Removed database seeding calls from here
-
-    console.log("Starting Gunicorn server on 8001...");
-    const logStream = fs.createWriteStream(path.join(process.cwd(), 'backend.log'), { flags: 'a' });
-    logStream.write(`[${new Date().toISOString()}] Attempting to start Gunicorn on 8001...\n`);
-    
-    const wsgiApp = "fixitall_backend.wsgi:application";
-
-    const server = spawn(pythonCmd, [
-      "-m", "gunicorn",
-      wsgiApp,
-      "--bind", "0.0.0.0:8001",
-      "--workers", "3",
-      "--timeout", "120",
-      "--access-logfile", "-",
-      "--error-logfile", "-"
-    ], {
-      cwd: backendDir,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, PYTHONUNBUFFERED: "1" }
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
     });
-
-    if (server.stdout) {
-      server.stdout.on('data', (data) => {
-        const out = data.toString();
-        process.stdout.write(`[GUNICORN STDOUT] ${out}`);
-        logStream.write(out);
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    } else {
+      console.warn("Warning: 'dist' folder not found. Static files will not be served.");
+      app.get('*', (req, res) => {
+        res.status(404).send("Production build not found. Please run 'npm run build'.");
       });
     }
-    if (server.stderr) {
-      server.stderr.on('data', (data) => {
-        const out = data.toString();
-        process.stderr.write(`[GUNICORN STDERR] ${out}`);
-        logStream.write(out);
-      });
-    }
+  }
 
-    server.on("error", (err) => {
-      console.error("Failed to start Gunicorn server:", err);
-      logStream.write(`Failed to start Gunicorn server: ${err.message}\n`);
-    });
-    
-    server.on("close", (code) => {
-        console.log(`Gunicorn server closed with code ${code}`);
-        logStream.write(`Gunicorn server closed with code ${code}\n`);
-    });
-  };
-
-  start();
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[${new Date().toISOString()}] Server running on http://0.0.0.0:${PORT}`);
+  });
 }
+
+startServer().catch(err => {
+  console.error("Critical server startup error:", err);
+  process.exit(1);
+});

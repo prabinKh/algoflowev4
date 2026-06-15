@@ -17,33 +17,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Show server environment
-        run: |
-          echo "Running on my own server!"
-          uname -a
-          df -h
-          node --version || echo "Node.js not installed"
-          python3 --version || echo "Python3 not installed"
-          npm --version || echo "npm not installed"
-
       - name: Clean up previous processes
         run: |
-          # Kill both old CJS and new MJS builds to be safe
-          pkill -f "dist/server.cjs" 2>/dev/null || true
-          pkill -f "dist/server.mjs" 2>/dev/null || true 
-          pkill -f "manage.py runserver" 2>/dev/null || true
-          pkill -f "gunicorn" 2>/dev/null || true
-          fuser -k 3000/tcp 2>/dev/null || true
-          fuser -k 8001/tcp 2>/dev/null || true
-          # Remove the PID file if it exists
-          rm -f "${GITHUB_WORKSPACE}/.deploy/app.pid"
+          pkill -f "dist/server.mjs" || true
+          pkill -f "gunicorn" || true
+          fuser -k 3000/tcp || true
+          fuser -k 8001/tcp || true
         continue-on-error: true
 
       - name: Deploy backend and frontend
         env:
           PORT: 3000
           NODE_OPTIONS: --max-old-space-size=4096
-          # These secrets must be set in your GitHub Repository Settings
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
           DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
@@ -56,14 +41,23 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Waiting for services to become ready..."
-          # 60 attempts * 5 seconds = 5 minutes timeout
           for i in {1..60}; do
             if curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null 2>&1; then
-              echo "Health check passed on port 3000"
-              echo "Deployment complete. App is running on port 3000."
+              echo "Health check passed!"
               exit 0
             fi
+            echo "Waiting... ($i/60)"
             sleep 5
           done
-          echo "Health check failed after 5 minutes."
+          echo "Health check failed."
           exit 1
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          echo "=== App Logs ==="
+          cat .deploy/logs/app.log || echo "No app logs found"
+          echo "=== Backend Logs ==="
+          cat backend.log || echo "No backend logs found"
+          echo "=== Server Logs ==="
+          cat server.log || echo "No server logs found"
