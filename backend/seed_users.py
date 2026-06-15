@@ -2,7 +2,7 @@ import os
 import django
 import sys
 
-# Setup Django environment
+# Setup Django environment aa
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fixitall_backend.settings')
 django.setup()
 
