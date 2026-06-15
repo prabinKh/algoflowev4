@@ -10,7 +10,7 @@ APP_NAME="algoflow"
 PID_FILE="$ROOT_DIR/.deploy/app.pid"
 LOG_DIR="$ROOT_DIR/.deploy/logs"
 
-# Create directories
+# Create directories safely
 mkdir -p "$LOG_DIR"
 mkdir -p "$(dirname "$PID_FILE")"
 
@@ -74,6 +74,7 @@ start_app() {
   # Ensure log directory exists before starting
   mkdir -p "$LOG_DIR"
   
+  # Use nohup to keep the process running after the script exits
   nohup npm run start > "$LOG_DIR/app.log" 2>&1 &
   echo $! > "$PID_FILE"
   echo "App started in background. Logs available at $LOG_DIR/app.log"

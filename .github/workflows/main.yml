@@ -19,10 +19,14 @@ jobs:
 
       - name: Clean up previous processes
         run: |
-          pkill -f "dist/server.mjs" || true
-          pkill -f "gunicorn" || true
+          # Kill processes using port 3000 and 8001
           fuser -k 3000/tcp || true
           fuser -k 8001/tcp || true
+          # Kill by name as backup
+          pkill -f "dist/server.mjs" || true
+          pkill -f "gunicorn" || true
+          # Small wait to ensure ports are released
+          sleep 5
         continue-on-error: true
 
       - name: Deploy backend and frontend
@@ -41,13 +45,14 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Waiting for services to become ready..."
-          for i in {1..60}; do
+          # 30 attempts * 10 seconds = 5 minutes timeout
+          for i in {1..30}; do
             if curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null 2>&1; then
               echo "Health check passed!"
               exit 0
             fi
-            echo "Waiting... ($i/60)"
-            sleep 5
+            echo "Waiting... ($i/30)"
+            sleep 10
           done
           echo "Health check failed."
           exit 1
@@ -56,8 +61,8 @@ jobs:
         if: failure()
         run: |
           echo "=== App Logs ==="
-          cat .deploy/logs/app.log || echo "No app logs found"
+          tail -n 100 .deploy/logs/app.log || echo "No app logs found"
           echo "=== Backend Logs ==="
-          cat backend.log || echo "No backend logs found"
+          tail -n 100 backend.log || echo "No backend logs found"
           echo "=== Server Logs ==="
-          cat server.log || echo "No server logs found"
+          tail -n 100 server.log || echo "No server logs found"
