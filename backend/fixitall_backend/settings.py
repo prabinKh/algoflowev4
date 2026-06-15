@@ -13,7 +13,14 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-placeholder-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000" )
+
+# Database configuration using DATABASE_URL
+import dj_database_url
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "db.sqlite3"))
+DATABASES = {
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+}
 
 INSTALLED_APPS = [
     "jazzmin",
@@ -56,7 +63,7 @@ TEMPLATES = [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.messages",
             ],
         },
     },
@@ -64,13 +71,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "fixitall_backend.wsgi.application"
 ASGI_APPLICATION = "fixitall_backend.asgi.application"
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
 
 AUTH_USER_MODEL = "account.MyUser"
 
@@ -87,6 +87,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles" # Added STATIC_ROOT
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -108,14 +109,14 @@ CSRF_TRUSTED_ORIGINS = [
 # Dynamically add allowed hosts to trusted origins
 for host in ALLOWED_HOSTS:
     if host and host != "*":
-        if not host.startswith("."):
-            CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
-            CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
+        if not host.startswith("." ):
+            CSRF_TRUSTED_ORIGINS.append(f"https://{host}" )
+            CSRF_TRUSTED_ORIGINS.append(f"http://{host}" )
         else:
-            CSRF_TRUSTED_ORIGINS.append(f"https://*{host}")
-            CSRF_TRUSTED_ORIGINS.append(f"http://*{host}")
+            CSRF_TRUSTED_ORIGINS.append(f"https://*{host}" )
+            CSRF_TRUSTED_ORIGINS.append(f"http://*{host}" )
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https" )
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = False
@@ -224,4 +225,3 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     }
 }
-

@@ -25,22 +25,44 @@ jobs:
           node --version || echo "Node.js not installed"
           python3 --version || echo "Python3 not installed"
           npm --version || echo "npm not installed"
-          # FIX: Show who the runner is running as (helps diagnose permission errors)
-          echo "Running as user: $(whoami) (uid=$(id -u))"
+
+      - name: Clean up previous processes
+        run: |
+          # Kill both old CJS and new MJS builds to be safe
+          pkill -f "dist/server.cjs" 2>/dev/null || true
+          pkill -f "dist/server.mjs" 2>/dev/null || true 
+          pkill -f "manage.py runserver" 2>/dev/null || true
+          pkill -f "gunicorn" 2>/dev/null || true
+          fuser -k 3000/tcp 2>/dev/null || true
+          fuser -k 8001/tcp 2>/dev/null || true
+          # Remove the PID file if it exists
+          rm -f "${GITHUB_WORKSPACE}/.deploy/app.pid"
+        continue-on-error: true # Allow cleanup to fail if processes don't exist
 
       - name: Deploy backend and frontend
         env:
           PORT: 3000
           NODE_OPTIONS: --max-old-space-size=4096
+          # Ensure these match settings.py and are set as GitHub Secrets
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           chmod +x scripts/deploy-self-hosted.sh
           ./scripts/deploy-self-hosted.sh
 
       - name: Verify deployment
-        # FIX: Give the app a few extra seconds after deploy before hitting health check
         run: |
-          sleep 5
-          echo "Frontend health:"
-          curl -fsS "http://127.0.0.1:3000/api/health"
-          echo ""
-          echo "Deployment complete. App is running on port 3000."
+          echo "Waiting for services to become ready..."
+          for i in {1..60}; do # Increased timeout for health check
+            if curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null 2>&1; then
+              echo "Health check passed on port 3000"
+              echo "Deployment complete. App is running on port 3000."
+              exit 0
+            fi
+            sleep 5 # Increased sleep interval
+          done
+          echo "Health check failed after multiple attempts."
+          exit 1
