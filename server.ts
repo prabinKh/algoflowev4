@@ -59,12 +59,14 @@ async function startServer() {
     const distPath = path.join(process.cwd(), 'dist');
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
-      app.get('*', (req, res) => {
+      
+      // FIX for Express 5.0+: Use {*splat} or (.*) for wildcard routing
+      app.get('(.*)', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });
     } else {
       console.warn("Warning: 'dist' folder not found. Static files will not be served.");
-      app.get('*', (req, res) => {
+      app.get('(.*)', (req, res) => {
         res.status(404).send("Production build not found. Please run 'npm run build'.");
       });
     }
