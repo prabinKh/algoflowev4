@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
 import cors from "cors";
@@ -50,6 +49,9 @@ async function startServer() {
   );
 
   if (process.env.NODE_ENV !== "production") {
+    // Dynamically import Vite only when in development mode
+    const { createServer: createViteServer } = await import("vite");
+    
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -60,15 +62,14 @@ async function startServer() {
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
       
-      // EXPRESS 5.0 FIX: Use a named parameter for the wildcard
-      // Old: app.get('*', ...)
-      // New: app.get('/:splat*', ...)
-      app.get('/:splat*', (req, res) => {
+      // FIX: Express 5.0 compatible wildcard using a RegExp literal to match any path
+      app.get(/.*/, (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
       });
     } else {
       console.warn("Warning: 'dist' folder not found. Static files will not be served.");
-      app.get('/:splat*', (req, res) => {
+      // FIX: Express 5.0 compatible fallback using RegExp
+      app.get(/.*/, (req, res) => {
         res.status(404).send("Production build not found. Please run 'npm run build'.");
       });
     }
